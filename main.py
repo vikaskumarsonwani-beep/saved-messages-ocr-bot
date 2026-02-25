@@ -1,24 +1,30 @@
-import asyncio
-import logging
 import os
+import logging
 
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command
+from telegram import Update
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
 
-# Token code me NA daalo.
-# Render me BOT_TOKEN environment variable set karenge.
+# Token env se lenge (Render me BOT_TOKEN set kiya hai)
 TOKEN = os.environ.get("BOT_TOKEN")
 
 if not TOKEN:
     raise RuntimeError("BOT_TOKEN environment variable set nahi hai. Render me jaake add karo.")
 
-bot = Bot(token=TOKEN)
-dp = Dispatcher()
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
+logger = logging.getLogger(__name__)
 
 
-@dp.message(Command("start"))
-async def cmd_start(message: types.Message):
-    await message.answer(
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
         "Namaste bhai! 👋\n"
         "Ye tumhara Saved Messages OCR Search Bot ka basic version hai.\n\n"
         "Abhi ke liye:\n"
@@ -28,35 +34,41 @@ async def cmd_start(message: types.Message):
     )
 
 
-@dp.message(lambda m: m.photo)
-async def handle_photo(message: types.Message):
-    await message.answer(
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
         "📸 Photo mil gaya bhai!\n"
         "Next step me is photo se text nikalne (OCR) ka system lagayenge."
     )
 
 
-@dp.message(lambda m: m.document)
-async def handle_document(message: types.Message):
-    await message.answer(
+async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
         "📄 Document mil gaya bhai!\n"
         "Isme se bhi baad me text nikalenge aur searchable bana denge."
     )
 
 
-@dp.message()
-async def fallback(message: types.Message):
-    await message.answer(
-        "Filhaal main basic mode me hu.\n"
-        "Mujhe /start bhejo, ya koi photo/document bhejo. 🙂"
-    )
+async def fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Kuch bhi aur message aaya to
+    if update.message:
+        await update.message.reply_text(
+            "Filhaal main basic mode me hu.\n"
+            "Mujhe /start bhejo, ya koi photo/document bhejo. 🙂"
+        )
 
 
-async def main():
-    logging.basicConfig(level=logging.INFO)
+def main():
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    # Handlers
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
+    app.add_handler(MessageHandler(filters.ALL, fallback))
+
     print("🚀 Bot start ho gaya (polling mode)...")
-    await dp.start_polling(bot)
+    app.run_polling()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
