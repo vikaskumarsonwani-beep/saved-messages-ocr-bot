@@ -1,14 +1,7 @@
 import os
 import logging
 
-from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    MessageHandler,
-    ContextTypes,
-    filters,
-)
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 # Token env se lenge (Render me BOT_TOKEN set kiya hai)
 TOKEN = os.environ.get("BOT_TOKEN")
@@ -23,8 +16,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
+def start(update, context):
+    update.message.reply_text(
         "Namaste bhai! 👋\n"
         "Ye tumhara Saved Messages OCR Search Bot ka basic version hai.\n\n"
         "Abhi ke liye:\n"
@@ -34,40 +27,41 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
+def handle_photo(update, context):
+    update.message.reply_text(
         "📸 Photo mil gaya bhai!\n"
         "Next step me is photo se text nikalne (OCR) ka system lagayenge."
     )
 
 
-async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
+def handle_document(update, context):
+    update.message.reply_text(
         "📄 Document mil gaya bhai!\n"
         "Isme se bhi baad me text nikalenge aur searchable bana denge."
     )
 
 
-async def fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Kuch bhi aur message aaya to
+def fallback(update, context):
     if update.message:
-        await update.message.reply_text(
+        update.message.reply_text(
             "Filhaal main basic mode me hu.\n"
             "Mujhe /start bhejo, ya koi photo/document bhejo. 🙂"
         )
 
 
 def main():
-    app = ApplicationBuilder().token(TOKEN).build()
+    # Updater purane (v13) style ka hai – ye hi stable hai
+    updater = Updater(TOKEN, use_context=True)
+    dp = updater.dispatcher
 
-    # Handlers
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-    app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
-    app.add_handler(MessageHandler(filters.ALL, fallback))
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(MessageHandler(Filters.photo, handle_photo))
+    dp.add_handler(MessageHandler(Filters.document, handle_document))
+    dp.add_handler(MessageHandler(Filters.all, fallback))
 
     print("🚀 Bot start ho gaya (polling mode)...")
-    app.run_polling()
+    updater.start_polling()
+    updater.idle()
 
 
 if __name__ == "__main__":
